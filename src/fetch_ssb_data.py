@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 SSB_API_BASE = "https://data.ssb.no/api/v0/no/table"
-DATA_DIR = Path(__file__).parent
+DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 RATE_LIMIT_DELAY = 2.5  # seconds between requests
 
 
@@ -269,6 +269,7 @@ def main():
     ]
 
     print(f"Fetching {len(queries)} tables from SSB API...")
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
     success_count = 0
     failed = []
 

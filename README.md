@@ -29,11 +29,11 @@ Per-class test performance:
 
 ### Confusion Matrix
 
-![Confusion Matrix](confusion_matrix.png)
+![Confusion Matrix](output/confusion_matrix.png)
 
 ### Feature Importance
 
-![Feature Importance](feature_importance.png)
+![Feature Importance](output/feature_importance.png)
 
 Top features: seasonal quarter factor, price acceleration, GDP-price interaction, price index level, price momentum, unemployment-price interaction, and regional strength.
 
@@ -72,15 +72,22 @@ python run_complete_analysis.py --skip-fetch
 ## Project Structure
 
 ```
-├── fetch_ssb_data.py         # SSB API data fetcher (10 tables)
-├── data_parser.py            # JSON-stat2 parser → unified CSV
-├── enhanced_features.py      # Feature engineering & labeling
-├── train_model.py            # Model training & evaluation (sklearn)
-├── random_forest_classifier.py  # Original from-scratch RF (kept for reference)
-├── backtest_strategy.py      # Trading strategy backtester
-├── run_complete_analysis.py   # Pipeline orchestrator
-├── processed/                 # Generated CSV output
-└── *.json                     # Cached SSB data
+├── run_complete_analysis.py       # Pipeline orchestrator (entry point)
+├── src/
+│   ├── fetch_ssb_data.py          # SSB API data fetcher (10 tables)
+│   ├── data_parser.py             # JSON-stat2 parser → unified CSV
+│   ├── enhanced_features.py       # Feature engineering & labeling
+│   ├── train_model.py             # Model training & evaluation (sklearn)
+│   ├── random_forest_classifier.py  # Original from-scratch RF (reference)
+│   └── backtest_strategy.py       # Trading strategy backtester
+├── data/                          # Cached SSB JSON data
+│   ├── kpi.json, policy_rate.json, ...
+│   └── (10 JSON files from SSB API)
+├── output/                        # Generated artifacts
+│   ├── processed_data.csv
+│   ├── confusion_matrix.png
+│   └── feature_importance.png
+└── requirements.txt
 ```
 
 ## Requirements
