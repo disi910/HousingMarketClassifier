@@ -78,16 +78,11 @@ class PropertyMarketDataParser:
 
     def __init__(self, data_dir=None):
         if data_dir is None:
-            current_dir = Path.cwd()
-            if (current_dir / 'kpi.json').exists():
-                self.data_dir = current_dir
-            elif (current_dir / 'data' / 'kpi.json').exists():
-                self.data_dir = current_dir / 'data'
-            else:
-                self.data_dir = current_dir
+            project_root = Path(__file__).resolve().parent.parent
+            self.data_dir = project_root / "data"
         else:
             self.data_dir = Path(data_dir)
-        print(f"Looking for data files in: {self.data_dir}")
+        print(f"Data dir: {self.data_dir}")
 
     # ── Generic JSON-stat2 parser ───────────────────────────────
 
@@ -415,7 +410,7 @@ class PropertyMarketDataParser:
         return df
 
     def save_processed_data(self, df, output_file="processed_data.csv"):
-        output_dir = Path("processed")
+        output_dir = Path(__file__).resolve().parent.parent / "output"
         output_dir.mkdir(parents=True, exist_ok=True)
         output_path = output_dir / output_file
         df.to_csv(output_path, index=False, encoding="utf-8")

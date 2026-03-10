@@ -11,10 +11,14 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
+from pathlib import Path
 from enhanced_features import create_enhanced_features, create_labels, get_available_features
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+OUTPUT_DIR = PROJECT_ROOT / "output"
+
 # ── Load & prepare ──────────────────────────────────────────────
-df = pd.read_csv('processed/processed_data.csv')
+df = pd.read_csv(OUTPUT_DIR / 'processed_data.csv')
 df_enhanced = create_enhanced_features(df)
 df_labeled = create_labels(df_enhanced)
 available_features = get_available_features(df_labeled)
@@ -108,7 +112,7 @@ for ax, (y_true, y_pred, title) in zip(axes, [
 
 plt.suptitle(f'{best_model_name} — Housing Market Risk Classifier', fontsize=14, fontweight='bold')
 plt.tight_layout()
-plt.savefig('confusion_matrix.png', dpi=150, bbox_inches='tight')
+plt.savefig(OUTPUT_DIR / 'confusion_matrix.png', dpi=150, bbox_inches='tight')
 plt.close()
 
 # ── Feature importance ──────────────────────────────────────────
@@ -132,7 +136,7 @@ plt.barh(top['feature'][::-1], top['importance'][::-1])
 plt.xlabel('Feature Importance (Gini)')
 plt.title(f'Top 15 Features — {best_model_name}')
 plt.tight_layout()
-plt.savefig('feature_importance.png', dpi=150, bbox_inches='tight')
+plt.savefig(OUTPUT_DIR / 'feature_importance.png', dpi=150, bbox_inches='tight')
 plt.close()
 
 print("\nSaved: confusion_matrix.png, feature_importance.png")
