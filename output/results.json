@@ -1,0 +1,161 @@
+{
+  "min_year": 2014,
+  "n_samples": 645,
+  "n_features": 32,
+  "split": {
+    "train": {
+      "quarters": [
+        "2014K1",
+        "2020K3"
+      ],
+      "n_quarters": 27,
+      "n_rows": 405
+    },
+    "val": {
+      "quarters": [
+        "2020K4",
+        "2022K4"
+      ],
+      "n_quarters": 9,
+      "n_rows": 135
+    },
+    "test": {
+      "quarters": [
+        "2023K1",
+        "2024K3"
+      ],
+      "n_quarters": 7,
+      "n_rows": 105
+    }
+  },
+  "baselines": {
+    "Majority class": {
+      "val": {
+        "accuracy": 0.4962962962962963,
+        "macro_f1": 0.22112211221122113
+      },
+      "test": {
+        "accuracy": 0.41904761904761906,
+        "macro_f1": 0.19686800894854586
+      }
+    },
+    "Persistence": {
+      "val": {
+        "accuracy": 0.4074074074074074,
+        "macro_f1": 0.3218428341618588
+      },
+      "test": {
+        "accuracy": 0.44761904761904764,
+        "macro_f1": 0.3565668202764977
+      }
+    },
+    "Seasonal lookup": {
+      "val": {
+        "accuracy": 0.8888888888888888,
+        "macro_f1": 0.6272383563920395
+      },
+      "test": {
+        "accuracy": 0.9238095238095239,
+        "macro_f1": 0.6422723807629843
+      }
+    }
+  },
+  "models": {
+    "RandomForest": {
+      "accuracy": 0.7481481481481481,
+      "macro_f1": 0.590212708120965
+    },
+    "GradientBoosting": {
+      "accuracy": 0.5777777777777777,
+      "macro_f1": 0.5075793976624193
+    }
+  },
+  "best_model": "RandomForest",
+  "best": {
+    "val": {
+      "accuracy": 0.7481481481481481,
+      "macro_f1": 0.590212708120965
+    },
+    "test": {
+      "accuracy": 0.9142857142857143,
+      "macro_f1": 0.639111824505083
+    }
+  },
+  "best_baseline": "Seasonal lookup",
+  "model_minus_baseline_test_f1": -0.003160556257901348,
+  "per_class_test": {
+    "Hot": {
+      "precision": 0.9777777777777777,
+      "recall": 1.0,
+      "f1-score": 0.9887640449438202,
+      "support": 44.0
+    },
+    "Stable": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 8.0
+    },
+    "Cooling": {
+      "precision": 0.8813559322033898,
+      "recall": 0.9811320754716981,
+      "f1-score": 0.9285714285714286,
+      "support": 53.0
+    },
+    "accuracy": 0.9142857142857143,
+    "macro avg": {
+      "precision": 0.6197112366603892,
+      "recall": 0.660377358490566,
+      "f1-score": 0.639111824505083,
+      "support": 105.0
+    },
+    "weighted avg": {
+      "precision": 0.854610348847637,
+      "recall": 0.9142857142857143,
+      "f1-score": 0.8830467018267982,
+      "support": 105.0
+    }
+  },
+  "top_features": [
+    {
+      "feature": "seasonal_factor",
+      "importance": 0.1492111152306094
+    },
+    {
+      "feature": "quarter_num",
+      "importance": 0.08700579600945671
+    },
+    {
+      "feature": "price_index_momentum",
+      "importance": 0.07765372674897363
+    },
+    {
+      "feature": "price_acceleration",
+      "importance": 0.052764285341888345
+    },
+    {
+      "feature": "gdp_price_interaction",
+      "importance": 0.052286548870518215
+    },
+    {
+      "feature": "supply_demand_score",
+      "importance": 0.04043888213835907
+    },
+    {
+      "feature": "rate_price_interaction",
+      "importance": 0.037163306605253583
+    },
+    {
+      "feature": "demand_indicator",
+      "importance": 0.03706526248104119
+    },
+    {
+      "feature": "unemployment_price_interaction",
+      "importance": 0.03371730380197141
+    },
+    {
+      "feature": "regional_strength",
+      "importance": 0.0331390297192668
+    }
+  ]
+}

@@ -2,10 +2,22 @@ import pandas as pd
 import numpy as np
 
 
+def _expanding_z(df, col):
+    """Z-score a column against its own past only, per region.
+
+    Standardising against statistics of the whole panel would let information
+    from the test years bleed into the training features.
+    """
+    g = df.groupby('region')[col]
+    mean = g.transform(lambda s: s.expanding(min_periods=2).mean())
+    std = g.transform(lambda s: s.expanding(min_periods=2).std())
+    return ((df[col] - mean) / (std + 1e-9)).fillna(0.0)
+
+
 def create_enhanced_features(df):
     """Create features from existing and new data columns."""
     df = df.copy()
-    df = df.sort_values(['region', 'quarter'])
+    df = df.sort_values(['region', 'quarter']).reset_index(drop=True)
 
     # ── Moving averages and momentum ────────────────────────────
     for col in ['price_index', 'sales_volume']:
@@ -33,7 +45,7 @@ def create_enhanced_features(df):
 
     # ── Interest rate dynamics ──────────────────────────────────
     if 'policy_rate' in df.columns:
-        df['rate_change'] = df['policy_rate'].diff().fillna(0)
+        df['rate_change'] = df.groupby('region')['policy_rate'].diff().fillna(0)
         if 'price_index' in df.columns:
             df['rate_price_interaction'] = df['policy_rate'] * df['price_index'] / 100
 
@@ -44,11 +56,8 @@ def create_enhanced_features(df):
 
     # ── Supply/demand imbalance score ───────────────────────────
     if 'population_change' in df.columns and 'sales_volume' in df.columns:
-        pop_std = df['population_change'].std()
-        vol_std = df['sales_volume'].std()
         df['supply_demand_score'] = (
-            df['population_change'] / (pop_std if pop_std > 0 else 1) -
-            df['sales_volume'] / (vol_std if vol_std > 0 else 1)
+            _expanding_z(df, 'population_change') - _expanding_z(df, 'sales_volume')
         )
 
     # ── Seasonal factors ────────────────────────────────────────
@@ -59,7 +68,7 @@ def create_enhanced_features(df):
 
     # ── NEW: Unemployment features ──────────────────────────────
     if 'unemployment_rate' in df.columns:
-        df['unemployment_change'] = df['unemployment_rate'].diff().fillna(0)
+        df['unemployment_change'] = df.groupby('region')['unemployment_rate'].diff().fillna(0)
         if 'price_index' in df.columns:
             df['unemployment_price_interaction'] = (
                 df['unemployment_rate'] * df['price_index'] / 100
@@ -76,7 +85,7 @@ def create_enhanced_features(df):
 
     # ── NEW: Mortgage rate features ─────────────────────────────
     if 'mortgage_rate' in df.columns:
-        df['mortgage_rate_change'] = df['mortgage_rate'].diff().fillna(0)
+        df['mortgage_rate_change'] = df.groupby('region')['mortgage_rate'].diff().fillna(0)
         if 'policy_rate' in df.columns:
             df['mortgage_spread'] = df['mortgage_rate'] - df['policy_rate']
 
@@ -87,7 +96,9 @@ def create_enhanced_features(df):
 
     # ── NEW: GDP features ───────────────────────────────────────
     if 'gdp_change' in df.columns:
-        df['gdp_ma4'] = df['gdp_change'].rolling(4, min_periods=1).mean()
+        df['gdp_ma4'] = df.groupby('region')['gdp_change'].transform(
+            lambda x: x.rolling(4, min_periods=1).mean()
+        )
         if 'price_index' in df.columns:
             df['gdp_price_interaction'] = df['gdp_change'] * df['price_index'] / 100
 
@@ -97,16 +108,21 @@ def create_enhanced_features(df):
         df['affordability_change'] = df.groupby('region')['affordability_ratio'].pct_change(4)
 
     # ── NEW: Composite demand indicator ─────────────────────────
-    if 'population_change' in df.columns and 'unemployment_rate' in df.columns:
-        pop_z = (df['population_change'] - df['population_change'].mean()) / (df['population_change'].std() + 1e-9)
-        unemp_z = (df['unemployment_change'] - df['unemployment_change'].mean()) / (df['unemployment_change'].std() + 1e-9) if 'unemployment_change' in df.columns else 0
-        df['demand_indicator'] = pop_z - unemp_z
+    if 'population_change' in df.columns and 'unemployment_change' in df.columns:
+        df['demand_indicator'] = (
+            _expanding_z(df, 'population_change') - _expanding_z(df, 'unemployment_change')
+        )
 
     return df
 
 
 def create_labels(df, hot_threshold=2.0, cooling_threshold=-0.5):
-    """Create risk labels based on next quarter price change."""
+    """Create risk labels based on next quarter price change.
+
+    Returns the frame sorted by ['quarter', 'region'] so that a positional
+    split is chronological. Sorting by region first silently turned the
+    intended time split into an alphabetical split by county.
+    """
     df = df.sort_values(['region', 'quarter'])
     df['price_next'] = df.groupby('region')['price_index'].shift(-1)
     df['price_change_next'] = (df['price_next'] / df['price_index'] - 1) * 100
@@ -122,11 +138,22 @@ def create_labels(df, hot_threshold=2.0, cooling_threshold=-0.5):
             return 1  # Stable
 
     df['risk_label'] = df['price_change_next'].apply(categorize_risk)
-    return df.dropna(subset=['risk_label'])
+
+    # Previous quarter's label, known at prediction time: the persistence baseline.
+    df['risk_label_prev'] = df.groupby('region')['risk_label'].shift(1)
+
+    df = df.dropna(subset=['risk_label'])
+    return df.sort_values(['quarter', 'region']).reset_index(drop=True)
 
 
-def get_available_features(df):
-    """Get list of features that exist in the dataframe."""
+def get_available_features(df, train_mask=None, min_coverage=0.7):
+    """Features present in the frame and well populated over the training window.
+
+    ``min_coverage`` is measured on the training rows only. Columns such as
+    ``policy_rate`` and ``household_income`` are absent for large stretches of
+    the panel; keeping them and filling the gaps with zeros would tell the model
+    that Norway had a 0% policy rate before 2014.
+    """
     possible_features = [
         # Original
         'price_index', 'price_index_momentum', 'price_acceleration', 'price_yoy',
@@ -145,6 +172,18 @@ def get_available_features(df):
         'demand_indicator',
     ]
 
-    available = [f for f in possible_features if f in df.columns and df[f].notna().sum() > 0]
-    print(f"Features: {len(available)} available")
-    return available
+    present = [f for f in possible_features if f in df.columns]
+    if train_mask is None:
+        train_mask = pd.Series(True, index=df.index)
+
+    train_df = df.loc[train_mask]
+    available, dropped = [], []
+    for f in present:
+        coverage = train_df[f].notna().mean()
+        (available if coverage >= min_coverage else dropped).append((f, coverage))
+
+    print(f"Features: {len(available)} kept, {len(dropped)} dropped "
+          f"(<{min_coverage:.0%} coverage in training window)")
+    if dropped:
+        print("  dropped: " + ", ".join(f"{f} ({c:.0%})" for f, c in dropped))
+    return [f for f, _ in available]
